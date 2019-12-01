@@ -6,9 +6,9 @@
     </li>
     <li>
         It is important to add information about the request being made
-        ```javascript
+        <snipet>
             //@route    GET api/auth
             //@desc     Test route
             //@acess    Public
-        ```
+        </snipet>
 </ul>
