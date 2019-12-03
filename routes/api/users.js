@@ -3,6 +3,7 @@ const router = express.Router();
 const gravatar = require('gravatar');
 const bcrypt = require('bcryptjs');
 const config = require('config');
+const jwt = require('jsonwebtoken');
 const { check, validationResult } = require('express-validator');
 const User = require('../../models/User');
 
@@ -21,19 +22,21 @@ router.post(
 			'Please enter a password with 6 or more characters'
 		).isLength({ min: 6 })
 	],
-	(req, res) => {
+	async (req, res) => {
 		const errors = validationResult(req);
 		if (!errors.isEmpty()) {
 			return res.status(400).json({ errors: errors.array() });
 		}
-		const { name, email, password } = req.bodu;
+		const { name, email, password } = req.body;
 		try {
 			// See if user Exists
 
-			let user = User.findOne({ email });
+			let user = await User.findOne({ email });
 
 			if (user) {
-				res.status(400).json({ errors: [{ msg: 'User already exists' }] });
+				return res
+					.status(400)
+					.json({ errors: [{ msg: 'User already exists' }] });
 			}
 
 			// Get users Gravatar
@@ -53,9 +56,9 @@ router.post(
 
 			// Encrypt Password
 
-			const salt = bcrypt.genSalt(10);
+			const salt = await bcrypt.genSalt(10);
 
-			user.password = bcrypt.hash(password, salt);
+			user.password = await bcrypt.hash(password, salt);
 
 			// Save user to MongoDB
 
@@ -63,7 +66,21 @@ router.post(
 
 			// Return jsonwebtokem
 
-			res.send('Users Route');
+			const payload = {
+				user: {
+					id: user.id
+				}
+			};
+
+			jwt.sign(
+				payload,
+				config.get('jwtSecret'),
+				{ expiresIn: 360000 },
+				(err, token) => {
+					if (err) throw err;
+					res.json({ token });
+				}
+			);
 		} catch (err) {
 			console.log(err.message);
 			res.status(500).send('Server Error!!');
